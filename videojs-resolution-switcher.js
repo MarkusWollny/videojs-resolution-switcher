@@ -128,7 +128,9 @@
           }
         });
         //Sort sources
-        this.currentSources = src.sort(compareResolutions);
+        this.currentSources = function() {
+          return src.sort(compareResolutions)
+        };
         this.groupedSrc = bucketSources(this.currentSources);
         // Pick one by default
         var chosen = chooseSrc(this.groupedSrc, this.currentSources);
@@ -169,7 +171,7 @@
         // Change player source and wait for loadeddata event, then play video
         // loadedmetadata doesn't work right now for flash.
         // Probably because of https://github.com/videojs/video-js-swf/issues/124
-        // If player preload is 'none' and then loadeddata not fired. So, we need timeupdate event for seek handle (timeupdate doesn't work properly with flash)
+        // If player preload is 'none' and then loadeddata not fired. So, we need timeupdate event for seek handle (timeupdate doesn't work properly with flash)        
         var handleSeekEvent = 'loadeddata';
         if(this.player_.techName_ !== 'Youtube' && this.player_.preload() === 'none' && this.player_.techName_ !== 'Flash') {
           handleSeekEvent = 'timeupdate';
@@ -181,11 +183,12 @@
             player.handleTechSeeked_();
             if(!isPaused){
               // Start playing and hide loadingSpinner (flash issue ?)
-              player.play();
-              player.handleTechSeeked_()
+              player.play();              
+              player.handleTechSeeked_();
+              this.player_.loadingSpinner.hide();
             }
             player.trigger('resolutionchange');
-          });
+          });       
         return player;
       };
 
@@ -232,8 +235,8 @@
           label: {},
           res: {},
           type: {}
-        };
-        src.map(function(source) {
+        };        
+        src().map(function(source) {
           initResolutionKey(resolutions, 'label', source);
           initResolutionKey(resolutions, 'res', source);
           initResolutionKey(resolutions, 'type', source);
@@ -262,15 +265,17 @@
        * @returns {Object} {res: string, sources: []}
        */
       function chooseSrc(groupedSrc, src){
+
+        var aSrc = src(); 
         var selectedRes = settings['default']; // use array access as default is a reserved keyword
         var selectedLabel = '';
         if (selectedRes === 'high') {
-          selectedRes = src[0].res;
-          selectedLabel = src[0].label;
+          selectedRes = aSrc[0].res;
+          selectedLabel = aSrc[0].label;
         } else if (selectedRes === 'low' || selectedRes == null || !groupedSrc.res[selectedRes]) {
           // Select low-res if default is low or not set
-          selectedRes = src[src.length - 1].res;
-          selectedLabel = src[src.length -1].label;
+          selectedRes = aSrc[aSrc.length - 1].res;
+          selectedLabel = aSrc[aSrc.length -1].label;
         } else if (groupedSrc.res[selectedRes]) {
           selectedLabel = groupedSrc.res[selectedRes][0].label;
         }
