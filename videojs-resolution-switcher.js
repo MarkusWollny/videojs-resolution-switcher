@@ -1,102 +1,112 @@
 /*! videojs-resolution-switcher - 2015-7-26
  * Copyright (c) 2016 Kasper Moskwiak
- * Modified by Pierre Kraft and Derk-Jan Hartman
+ * Modified by Pierre Kraft, Derk-Jan Hartman, Markus Wollny
  * Licensed under the Apache-2.0 license. */
 
 (function() {
-  /* jshint eqnull: true*/
-  /* global require */
-  'use strict';
-  var videojs = null;
-  if(typeof window.videojs === 'undefined' && typeof require === 'function') {
-    videojs = require('video.js');
-  } else {
-    videojs = window.videojs;
-  }
+	/* jshint eqnull: true*/
+	/* global require */
+	'use strict';
+	var videojs = null;
+	if(typeof window.videojs === 'undefined' && typeof require === 'function') {
+		videojs = require('video.js');
+	} else {
+		videojs = window.videojs;
+	}
 
-  (function(window, videojs) {
-    var videoJsResolutionSwitcher,
-      defaults = {
-        ui: true
-      };
+	(function(window, videojs) {
+		var videoJsResolutionSwitcher,
+		defaults = {
+			ui: true
+		};
 
-    /*
-     * Resolution menu item
-     */
-    var MenuItem = videojs.getComponent('MenuItem');
-    var ResolutionMenuItem = videojs.extend(MenuItem, {
-      constructor: function(player, options){
-        options.selectable = true;
-        // Sets this.player_, this.options_ and initializes the component
-        MenuItem.call(this, player, options);
-        this.src = options.src;
+	/*
+	* Resolution menu item
+	*/
+	const MenuItem = videojs.getComponent('MenuItem');
+	class ResolutionMenuItem extends MenuItem {
 
-        player.on('resolutionchange', videojs.bind(this, this.update));
-      }
-    } );
-    ResolutionMenuItem.prototype.handleClick = function(event){
-      MenuItem.prototype.handleClick.call(this,event);
-      this.player_.currentResolution(this.options_.label);
-    };
-    ResolutionMenuItem.prototype.update = function(){
-      var selection = this.player_.currentResolution();
-      this.selected(this.options_.label === selection.label);
-    };
-    MenuItem.registerComponent('ResolutionMenuItem', ResolutionMenuItem);
+		constructor(player, options){
+			options.selectable = true;
+			// Sets this.player_, this.options_ and initializes the component
+			super(player, options);
+			this.src = options.src;
+			player.on('resolutionchange', videojs.bind(this, this.update));
+		}
 
-    /*
-     * Resolution menu button
-     */
-    var MenuButton = videojs.getComponent('MenuButton');
-    var ResolutionMenuButton = videojs.extend(MenuButton, {
-      constructor: function(player, options){
-        this.label = document.createElement('span');
-        options.label = 'Quality';
-        // Sets this.player_, this.options_ and initializes the component
-        MenuButton.call(this, player, options);
-        this.el().setAttribute('aria-label','Quality');
-        this.controlText('Quality');
+		handleClick(event){
+			MenuItem.prototype.handleClick.call(this,event);
+			super.handleClick(this,event);
+			this.player_.currentResolution(this.options_.label);
+		}
 
-        if(options.dynamicLabel){
-          videojs.dom.addClass(this.label, 'vjs-resolution-button-label');
-          this.el().appendChild(this.label);
-        }else{
-          var staticLabel = document.createElement('span');
-           videojs.dom.addClass(staticLabel, 'vjs-menu-icon');
-          this.el().appendChild(staticLabel);
-        }
-        player.on('updateSources', videojs.bind( this, this.update ) );
-      }
-    } );
-    ResolutionMenuButton.prototype.createItems = function(){
-      var menuItems = [];
-      var labels = (this.sources && this.sources.label) || {};
+		update = function(){
+			const selection = this.player_.currentResolution();
+			this.selected(this.options_.label === selection.label);
+		}
+	}
 
-      // FIXME order is not guaranteed here.
-      for (var key in labels) {
-        if (labels.hasOwnProperty(key)) {
-          menuItems.push(new ResolutionMenuItem(
-            this.player_,
-            {
-              label: key,
-              src: labels[key],
-              selected: key === (this.currentSelection ? this.currentSelection.label : false)
-            })
-          );
-        }
-      }
-      return menuItems;
-    };
-    ResolutionMenuButton.prototype.update = function(){
-      this.sources = this.player_.getGroupedSrc();
-      this.currentSelection = this.player_.currentResolution();
-      this.label.innerHTML = this.currentSelection ? this.currentSelection.label : '';
-      return MenuButton.prototype.update.call(this);
-    };
-    ResolutionMenuButton.prototype.buildCSSClass = function(){
-      return MenuButton.prototype.buildCSSClass.call( this ) + ' vjs-resolution-button';
-    };
-    MenuButton.registerComponent('ResolutionMenuButton', ResolutionMenuButton);
+	MenuItem.registerComponent('ResolutionMenuItem', ResolutionMenuItem);
+
+	/*
+	 * Resolution menu button
+	 */
+	const MenuButton = videojs.getComponent('MenuButton');
+	class ResolutionMenuButton extends MenuButton {
+
+		constructor(player, options){
+			options.label = 'Quality';
+			// Sets this.player_, this.options_ and initializes the component
+			super(player, options);
+			
+			this.label = document.createElement('span');
+
+			this.el().setAttribute('aria-label','Quality');
+			this.controlText('Quality');
+
+			if(options.dynamicLabel){
+				videojs.dom.addClass(this.label, 'vjs-resolution-button-label');
+				this.el().appendChild(this.label);
+			 } else {
+				var staticLabel = document.createElement('span');
+				videojs.dom.addClass(staticLabel, 'vjs-menu-icon');
+				this.el().appendChild(staticLabel);
+			}
+			player.on('updateSources', videojs.bind( this, this.update ) );
+		}
+
+		createItems(){
+			const menuItems = [];
+			const labels = (this.sources && this.sources.label) || {};
+			for (var key in labels) {
+				if (labels.hasOwnProperty(key)) {
+					menuItems.push(new ResolutionMenuItem(
+						this.player_,
+						{
+						label: key,
+						src: labels[key],
+						selected: key === (this.currentSelection ? this.currentSelection.label : false)
+						})
+					);
+				}
+			}
+			return menuItems;
+		}
+
+		update(){
+			this.sources = this.player_.getGroupedSrc();
+			this.currentSelection = this.player_.currentResolution();
+			if (this.hasOwnProperty('label')){
+				this.label.innerHTML = this.currentSelection ? this.currentSelection.label : '';
+			}
+			return super.update();
+		}
+
+		buildCSSClass(){
+			return super.buildCSSClass( this ) + ' vjs-resolution-button';
+		}
+	}
+	MenuButton.registerComponent('ResolutionMenuButton', ResolutionMenuButton);
 
     /**
      * Initialize the plugin.
